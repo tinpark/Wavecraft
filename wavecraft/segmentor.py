@@ -77,14 +77,11 @@ class Segmentor:
                 debug.log_warning(f'Skipping segment {i+1} because \
                                   it\'s too short: {segment_length}s')
                 continue
-
             count += 1
             segment = self.processor.fade_io(segment, sr_m, curve_type=self.args.curve_type,
                                              fade_in=self.args.fade_in, fade_out=self.args.fade_out)
-
             segment = self.processor.filter(segment, sr_m,
                                             self.args.filter_frequency, btype=self.args.filter_type)
-
             segment = self.processor.normalise_audio(segment, sr_m, self.args.normalisation_level,
                                                      self.args.normalisation_mode)
             segment_path = self.base_segment_path+f'_{count}.wav'

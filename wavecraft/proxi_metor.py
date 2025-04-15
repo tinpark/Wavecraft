@@ -343,7 +343,7 @@ class ProxiMetor:
     def main(self):
         debug.log_info('Checking directory...')
         for sound in os.listdir(self.args.input):
-            if utils.check_format(sound):
+            if utils.check_format(sound, self.args.operation):
                 sound = os.path.splitext(sound)[0]
                 if not os.path.exists(os.path.join(self.data_path, sound + "_analysis.json")):
                     debug.log_error(sound + ' has not been analyzed. Please run wavecraft extract first.')

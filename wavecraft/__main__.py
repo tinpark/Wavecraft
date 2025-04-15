@@ -1,10 +1,20 @@
-#!/usr/bin/env python3
+# This file is the entry point for the wavecraft command line interface.
+# It parses the command line arguments and calls the main function in the operator module.
 
-import os, sys, argparse
+"""
+Wavecraft is a command line tool for audio processing and analysis. 
+It is designed to be simple and easy to use, while providing a wide range of features 
+for audio processing and analysis. Wavecraft is built on top of the Librosa library.
+"""
+
+import os
+import sys
+import argparse
+
 from wavecraft import operator
 from wavecraft import utils
 
-if __name__ == "__main__":
+def main():
     utils.print_ascii_art()
     formatter_class=lambda prog: argparse.HelpFormatter(prog,
     max_help_position=8, width=80, indent_increment=4)
@@ -159,4 +169,3 @@ if __name__ == "__main__":
             debug.log_error(f'Could not find input: {args.input}! Make sure the input is a valid  file or directory.')
             sys.exit()
     operator.main(args, revert)
-

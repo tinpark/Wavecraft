@@ -18,6 +18,9 @@ soundfile = "^0.12.1"
 sounddevice = "^0.4.6"
 asyncio = "^3.4.3"
 
+[tool.poetry.scripts]
+wavecraft = "wavecraft.__main__:main"
+
 
 [build-system]
 requires = ["poetry-core"]

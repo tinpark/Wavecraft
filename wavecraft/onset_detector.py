@@ -116,7 +116,9 @@ class OnsetDetector:
         debug.log_value(f'File length (sec): {dur}')
         debug.log_value(f'File length (min): {round(dur/60, 2)}')
         debug.log_value(f'Frame count: {self.args.num_frames}')
-
+        onset_times_c = onset_times
+        onsets_c = onsets
+        segment_lengths_c = segment_lengths
         if len(onsets) > 15:
             onsets_c = [onsets[0], onsets[1], onsets[2], onsets[-3], onsets[-2], onsets[-1]]
             onset_times_c = [onset_times[0], onset_times[1], onset_times[2], onset_times[-3], onset_times[-2], onset_times[-1]]

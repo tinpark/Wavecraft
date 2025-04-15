@@ -226,7 +226,8 @@ def load_json (input):
         return data
     
         
-def check_format(file, dsp):
+def check_format(file, operation):
+    dsp = operation not in ["wmeta", "info", "proxim"]
     if dsp:
         return file.split('.')[-1] in ['wav', 'aif', 'aiff', 'flac', 'ogg', 'mp3']
     return file.split('.')[-1] in ['yaml', 'json']

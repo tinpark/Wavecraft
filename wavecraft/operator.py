@@ -7,6 +7,8 @@ import sys
 import asyncio
 import soundfile as sf
 import librosa
+
+from .konkat import Konkat
 from .segmentor import Segmentor
 from .feature_extractor import Extractor
 from .onset_detector import OnsetDetector
@@ -29,6 +31,7 @@ def main(args, revert=None):
         None
     """
     utils.progress(args.operation)
+    
     if args.operation == "proxim":
         debug.log_info('Calculating <proximity metric>')
         craft = ProxiMetor(args)
@@ -37,7 +40,7 @@ def main(args, revert=None):
 
     dsp = args.operation not in ["wmeta", "info", "proxim"]
     process = args.operation not in ["segment", "extract", "onset", "beat",
-                                           "decomp", "proxim", "rename"]
+                                           "decomp", "proxim", "rename", "concat"]
     # store these as they will be adjusted for short signals
     n_fft = args.n_fft
     hop_size = args.hop_size
@@ -48,6 +51,16 @@ def main(args, revert=None):
 
     debug.log_info('Loading...')
     files = load_files(args)
+
+    if args.operation == "concat":
+        if args.concat_target is None:
+            debug.log_error('Concat target not provided!')
+            sys.exit(1)
+        args.input = files
+        args.sample_rate = sf.info(files[0]).samplerate
+        craft = Konkat(args)
+        craft.main()
+        return
 
     warnings = {}
     errors = {}
@@ -215,7 +228,7 @@ def load_files(args):
                         sys.exit()
                     if user_input.lower() == '1':
                         for subfile in os.listdir(os.path.join(input_file, file)):
-                            if utils.check_format(subfile, dsp):
+                            if utils.check_format(subfile, args.operation):
                                 files.append(os.path.join(input_dir, file, subfile))
                     elif user_input.lower() == '2':
                         debug.log_info('Searching for files in all subdirectories...')
@@ -224,13 +237,13 @@ def load_files(args):
                             files.append(os.path.join(input_dir, file))
                         for root, _, sub_files in os.walk(input_dir):
                             for file in sub_files:
-                                if utils.check_format(file, dsp):
+                                if utils.check_format(file, args.operation):
                                     files.append(os.path.join(root, file))
                         break
                     else:
                         continue
                 else:
-                    if utils.check_format(file, dsp):
+                    if utils.check_format(file, args.operation):
                         files.append(os.path.join(input_dir, file))
         else:
             debug.log_error('No files found!')

@@ -256,7 +256,7 @@ class Processor:
                 self.args.curve_type,
             )
         else:
-            return self._trim_silence_tails_interanl(
+            return self._trim_silence_tails_internal(
                 self.args.y,
                 self.args.sample_rate,
                 self.args.trim_silence,
@@ -340,7 +340,7 @@ class Processor:
             y, sr, range, fade_in, fade_out, curve_type=curve_type
         )
 
-    def _trim_silence_tails_interanl(
+    def _trim_silence_tails_internal(
         self, y, sr, top_db=-70.0, frame_length=2048, hop_length=512
     ):
         """
@@ -403,7 +403,7 @@ class Processor:
         Returns:
             ndarray: The trimmed audio waveform.
         """
-        return self._trim_silence_tails_interanl(
+        return self._trim_silence_tails_internal(
             y, sr, top_db, frame_length, hop_length
         )
 

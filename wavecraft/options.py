@@ -1,0 +1,11 @@
+source = '/Users/dtef/Desktop/untitled.wav'
+target = '/Users/dtef/Repos/Sync/Audio/Tools/Audio-Guide/Targets/Kumiko is beautiful.aif'
+# RESULT = 'cache/output'
+sr = 48000
+win_size = 2048
+hop_size = 2048
+nmf = 1
+pitch_shift = 0
+R = 1
+P = 1
+C = 3
