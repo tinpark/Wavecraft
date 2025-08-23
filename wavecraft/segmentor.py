@@ -160,6 +160,7 @@ class Segmentor:
         Returns:
             None
         """
+
         if self.args.segmentation_method == 'onset':
             from .onset_detector import OnsetDetector
             detector = OnsetDetector(self.args)
@@ -168,25 +169,46 @@ class Segmentor:
             from .beat_detector import BeatDetector
             detector = BeatDetector(self.args)
             segments = detector.main()
-        
-        user_input = input(f'{colors.GREEN}Choose an action:{colors.ENDC}\n1) Render segments\n2) Export segments as text file\n3) Exit\n')
-        if user_input.lower() == '3':
-            sys.exit()
 
-        if self.args.segmentation_method == 'text':
-            if(not self.args.input_text):
-                self.args.input_text = os.path.splitext(self.args.input)[0] + '.txt'
-            self.segment_using_txt(self.args.input, self.args.input_text, self.args.output_directory)
-        else:
-            os.makedirs(self.args.output_directory, exist_ok=True)
-            if user_input.lower() == '1':
-                self.render_segments(segments)
-            elif user_input.lower() == '2':
+        if self.args.action:
+            user_input = str(self.args.action)
+            
+            if user_input.lower() == '3':
+                sys.exit()
+
+            if self.args.segmentation_method == 'text':
+                if(not self.args.input_text):
+                    self.args.input_text = os.path.splitext(self.args.input)[0] + '.txt'
+                self.segment_using_txt(self.args.input, self.args.input_text, self.args.output_directory)
+            else:
+                os.makedirs(self.args.output_directory, exist_ok=True)
+                if user_input.lower() == '1':
+                    self.render_segments(segments)
+                elif user_input.lower() == '2':
+                    self.save_segments_as_txt(segments)
+
+
+            if self.args.save_txt:
                 self.save_segments_as_txt(segments)
+        else:
+            user_input = input(f'{colors.GREEN}Choose an action:{colors.ENDC}\n1) Render segments\n2) Export segments as text file\n3) Exit\n')
+            if user_input.lower() == '3':
+                sys.exit()
+
+            if self.args.segmentation_method == 'text':
+                if(not self.args.input_text):
+                    self.args.input_text = os.path.splitext(self.args.input)[0] + '.txt'
+                self.segment_using_txt(self.args.input, self.args.input_text, self.args.output_directory)
+            else:
+                os.makedirs(self.args.output_directory, exist_ok=True)
+                if user_input.lower() == '1':
+                    self.render_segments(segments)
+                elif user_input.lower() == '2':
+                    self.save_segments_as_txt(segments)
 
 
-        if self.args.save_txt:
-            self.save_segments_as_txt(segments)
+            if self.args.save_txt:
+                self.save_segments_as_txt(segments)
             
 
     
