@@ -53,7 +53,9 @@ if __name__ == "__main__":
                         help="Onset envelope to use for onset detection. Default is mel (mel spectrogram).\n Choices are: mel (mel spectrogram), mfcc (Mel-frequency cepstral coefficients), cqt_chr (chroma constant-Q transform), rms (root-mean-square energy), zcr (zero-crossing rate), cens (chroma energy normalized statistics), tmpg (tempogram), ftmpg (fourier tempogram), tonnetz (tonal centroid features)", required=False, metavar='')
     segmentation_group.add_argument("-bl", "--backtrack-length", type=float, default=40, help="Backtrack length in miliseconds. Backtracks the segments from the detected onsets. Default is 20ms.", required=False, metavar='')
     
-    segmentation_generics = parser.add_argument_group(title='   generics', description='[-fi, --fade-in 30] [-fo, --fade-out 50] [-ct, --curve-type exp] [-ts, --trim-silence -65] [-ff, --filter-frequency 40] [-ft, --filter-type high] [-nl, --normalisation-level -3] [-nm, --normalisation-mode peak]')
+    segmentation_group.add_argument('-a', '--action', type=int, choices=[1, 2, 3], help='Action to perform: 1 for Render, 2 for Export, 3 for Exit. This is useful if you want just to automatically batch a large folder of files with the same outcome.')
+    segmentation_generics = parser.add_argument_group(title='   generics', description='[-fi, --fade-in 2] [-fo, --fade-out 12] [-ct, --curve-type exp] [-ts, --trim-silence -65] [-ff, --filter-frequency 40] [-ft, --filter-type high] [-nl, --normalisation-level -3] [-nm, --normalisation-mode peak]')
+
     # Feature extraction
     feature_extraction_group = parser.add_argument_group(title='Feature extraction', description='operation -> extract')
     feature_extraction_group.add_argument("-fex", "--feature-extractor", type=str, choices=['mel', 'cqt', 'stft', 'cqt_chr', 'mfcc', 'rms', 'zcr', 'cens', 'tmpg', 'ftmpg', 'tonnetz', 'pf'], default=None,\
@@ -101,7 +103,7 @@ if __name__ == "__main__":
     # Normalization 
     normalization_group = parser.add_argument_group(title='Normalization - normalizes the audio file', description='operation -> norm')
     normalization_group.add_argument("-nl", "--normalisation-level", type=float, default=-3, required=False,
-                        help="Normalisation level, default is -3 db.", metavar='')
+                        help="Normalisation level, default is -3.", metavar='')
     normalization_group.add_argument("-nm", "--normalisation-mode", type=str, default="peak", choices=["peak", "rms", "loudness"], 
                         help="Normalisation mode; default is 'peak'.", required=False, metavar='')
 
@@ -122,8 +124,8 @@ if __name__ == "__main__":
     
     # fade
     fade_group = parser.add_argument_group(title='Fade - applies a fade in and/or fade out to the audio file. See audio settings for options', description='operation -> fade')
-    FO=30
-    FI=20
+    FO=12
+    FI=2
     fade_group.add_argument("-fi", "--fade-in", type=int, default=30, help=f"Duration in ms for fade in. Default is {FO}ms.", required=False, metavar='')
     fade_group.add_argument("-fo", "--fade-out", type=int, default=50, help=f"Duration in ms for fade in. Default is {FI}ms.", required=False, metavar='')
     fade_group.add_argument("-ct", "--curve-type", type=str, choices=['exp', 'log', 'linear', 's_curve','hann'], default="exp",\
