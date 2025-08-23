@@ -13,211 +13,127 @@ from .debug import Debug as debug
 #######################
 # Metadata
 #######################
-
 def extract_metadata(input_file):
     """
-    Extracts the comment metadata from an audio file using ffprobe.
-
-    Args:
-        input_file (str): The path to the input audio file.
-
-    Returns:
-        str: The extracted comment metadata.
-
-    Raises:
-        None
-
+    Extracts metadata from an audio file using ffprobe.
     """
-    # -show_entries format_tags=comment will show the comment metadata
-    # -of default=noprint_wrappers=1:nokey=1 will remove the wrapper and the key from the output
     command = [
-        'ffprobe',  input_file, '-v', 'error', '-show_entries', 'format_tags=comment', 
-        '-of', 'default=noprint_wrappers=1:nokey=1',
+        'ffprobe', input_file, '-v', 'error', '-show_entries',
+        'format_tags', '-of', 'json'
     ]
     output = subprocess.check_output(command, stderr=subprocess.DEVNULL, universal_newlines=True)
     if 'not found' in output:
         debug.log_error('ffmpeg is not installed. Please install it if you want to copy the metadata over.')
         return None
 
-    return output
+    metadata = json.loads(output)
+    return metadata.get('format', {}).get('tags', {})  # Returns a dictionary of metadata tags
+
 
 def generate_metadata(input_file, args):
-    """
-    Generate metadata for the given input file.
-
-    Args:
-        input_file (str): The path to the input file.
-        args (Namespace): The command line arguments.
-
-    Returns:
-        str: The final metadata string.
-    """
-    source_file_name = os.path.basename(input_file)
-    creation_time = os.stat(input_file)
-    # convert timestamp to a human readable format
-    creation_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(creation_time.st_ctime))
-    command = [
-        'ffprobe',  input_file, '-v', 'error', '-show_entries', 
-        'stream=sample_rate,channels,bits_per_raw_sample', '-of', 
-        'default=noprint_wrappers=1:nokey=1'
-    ]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, universal_newlines=True)
-    output, _ = process.communicate()
-
-    base_data = {
-        '-----------------------------------------': '',
-        'wavecraft_version': '0.1.0',
-        'operation': args.operation,
-        'source_file_name': source_file_name,
-        'source_creation_time': creation_time,
-        'source_sample_rate': output.splitlines()[0],
-        'source_channels': output.splitlines()[1],
-        'source_bit_depth': output.splitlines()[2]
-    }
-
-    base_data = _stringify_dict(base_data)
-    craft_data = _get_craft_metadata(args)
-    craft_data = base_data + craft_data
-    
     prev_metadata = extract_metadata(input_file)
+    craft_data = _get_craft_metadata(args)
+
+    # Ensure craft_data is a dictionary before combining
     final_metadata = _concat_metadata(prev_metadata, craft_data)
 
     return final_metadata
 
-def write_metadata(input_file, comment):
+
+def write_metadata(input_file, metadata):
     """
     Writes metadata to an audio file.
 
     Args:
         input_file (str): The path to the input audio file.
-        comment (str, list, dict): The metadata comment to be written. If it is a list, 
-            the elements will be joined with newline characters.
-            If it is a dictionary, the key-value pairs will be joined with newline characters.
+        metadata (dict): A dictionary containing metadata fields and their values.
 
     Returns:
         None
     """
-        
     if input_file.endswith('.json'):
         debug.log_warning('Cannot write metadata to a JSON file, skipping...')
         return
-    if isinstance(comment, list):
-        comment = '\n'.join(comment)
-    elif isinstance(comment, dict):
-        comment = '\n'.join([f'{k} : {v}' for k, v in comment.items()])
-        
-    comment = comment.replace(',', '')
-    
+
+    # Build ffmpeg command arguments for each metadata field
+    metadata_args = []
+    for key, value in metadata.items():
+        metadata_args.extend(['-metadata', f'{key}={value}'])
+
     with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
         command = [
-            'ffmpeg', '-v', 'quiet', '-y', '-i', input_file, '-metadata', f'comment={comment}', 
-            '-codec', 'copy', tmp_file.name
-        ]
+            'ffmpeg', '-v', 'quiet', '-y', '-i', input_file, '-codec', 'copy'
+        ] + metadata_args + [tmp_file.name]
         subprocess.run(command)
         os.replace(tmp_file.name, input_file)
+
 
 def export_metadata(data, output_path, operation, suffix='metadata'):
     """
     Export metadata to a JSON file.
 
     Args:
-        data (str): The metadata string to be exported.
+        data (dict): The metadata dictionary to be exported.
         output_path (str): The path where the JSON file will be saved.
+        operation (str): The operation (for example, 'segment') being performed.
         suffix (str): The suffix to be appended to the JSON file name.
 
     Returns:
         None
     """
     output_path = os.path.realpath(output_path)
-    meta_dir = os.path.dirname(output_path) + '/wavecraft_data'
+    meta_dir = os.path.join(os.path.dirname(output_path), 'wavecraft_data')
 
     if not os.path.exists(meta_dir):
         os.makedirs(meta_dir)
 
-    output_file = os.path.join(meta_dir, os.path.basename(output_path)
-                               +f'_{operation}'+f'_{suffix}.json')
+    output_file = f"{os.path.join(meta_dir, os.path.basename(output_path))}_{operation}_{suffix}.json"
 
-
-    data = data.replace('\n', ',')
-    data_dict = {}
-    data = data.split(',')
-    for item in data:
-        item = item.split(':')
-        if len(item) >= 2:
-            data_dict[item[0].strip()] = item[1].strip()
-        else:
-            data_dict[item[0].strip()] = ''
-    # output_file = meta_dir+f'_{suffix}.json'
     if os.path.exists(output_file):
         debug.log_warning(f'Overwriting JSON metadata {os.path.basename(output_file)}...')
     else:
         debug.log_info(f'Exporting JSON metadata {os.path.basename(output_file)}...')
+
+    # Write dictionary directly to JSON
     with open(output_file, 'w', encoding='utf-8') as file:
-        json.dump(data_dict, file, indent=4)
+        json.dump(data, file, indent=4)
+
 
 
 #######################
 # Private functions
 #######################
-
 def _get_craft_metadata(args):
-
-    normalization_metadata = _stringify_dict(_generate_normalization_metadata(args))
-    filter_metadata = _stringify_dict(_generate_filter_metadata(args))
-    trim_metadata = _stringify_dict(_generate_trim_metadata(args))
-    fade_metadata = _stringify_dict(_generate_fade_metadata(args))
-    audio_metadata = _stringify_dict(_generate_audio_settings_metadata(args))
+    metadata = {}
 
     if args.operation == 'segment':
-        seg_metadata = _stringify_dict(_generate_segmentation_metadata(args))
-        metadata = [seg_metadata, normalization_metadata, filter_metadata, 
-                    trim_metadata, fade_metadata, audio_metadata]
-        metadata = _join_metadata(metadata)
-        return metadata
+        metadata.update(_generate_segmentation_metadata(args))
     elif args.operation == 'extract':
-        fex_metadata = _stringify_dict(_generate_feature_extraction_metadata(args))
-        metadata = [fex_metadata, audio_metadata]
-        metadata = _join_metadata(metadata)
-        return metadata
+        metadata.update(_generate_feature_extraction_metadata(args))
     elif args.operation == 'decompose':
-        decomp_metadata = _stringify_dict(_generate_decomposition_metadata(args))
-        metadata = [decomp_metadata, audio_metadata]
-        metadata = _join_metadata(metadata)
-        return metadata
+        metadata.update(_generate_decomposition_metadata(args))
     elif args.operation == 'beat':
-        beat_metadata = _stringify_dict(_generate_beat_detection_metadata(args))
-        metadata = [beat_metadata, audio_metadata]
-        metadata = _join_metadata(metadata)
-        return metadata
+        metadata.update(_generate_beat_detection_metadata(args))
     elif args.operation == 'filter':
-        metadata = [filter_metadata, audio_metadata]
-        metadata = _join_metadata(metadata)
-        return metadata
+        metadata.update(_generate_filter_metadata(args))
     elif args.operation == 'norm':
-        metadata = [normalization_metadata, audio_metadata]
-        metadata = _join_metadata(metadata)
-        return metadata
+        metadata.update(_generate_normalization_metadata(args))
     elif args.operation == 'fade':
-        metadata = [fade_metadata, audio_metadata]
-        metadata = _join_metadata(metadata)
-        return metadata
+        metadata.update(_generate_fade_metadata(args))
     elif args.operation == 'trim':
-        metadata = [trim_metadata, audio_metadata]
-        metadata = _join_metadata(metadata)
-        return metadata
+        metadata.update(_generate_trim_metadata(args))
     elif args.operation == 'pan':
-        pan_metadata = _stringify_dict(_generate_pan_metadata(args))
-        metadata = [pan_metadata, audio_metadata]
-        metadata = _join_metadata(metadata)
-        return metadata
+        metadata.update(_generate_pan_metadata(args))
     elif args.operation == 'split':
-        split_metadata = _stringify_dict(_generate_split_metadata(args))
-        metadata = [split_metadata, audio_metadata]
-        metadata = _join_metadata(metadata)
-        return metadata
+        metadata.update(_generate_split_metadata(args))
     elif args.operation == 'proxim':
-        metadata = _stringify_dict(_generate_proximity_metric_metadata(args))
-        return metadata
+        metadata.update(_generate_proximity_metric_metadata(args))
+    
+    # Include audio settings in the metadata
+    metadata.update(_generate_audio_settings_metadata(args))
+
+    return metadata
+
 
 def _stringify_dict(d, new_line=True):
     if new_line:
@@ -225,25 +141,22 @@ def _stringify_dict(d, new_line=True):
     else:
         return ', '.join([f'{k}:{v}' for k, v in d.items()])
 
-def _concat_metadata(meta_data, craft_data):
+def _concat_metadata(prev_metadata, craft_data):
+    if prev_metadata is None:
+        prev_metadata = {}
 
-    if meta_data is None:
-        meta_data = ''
-        meta_data+=str(craft_data)
-    else:
-        for line in craft_data.splitlines():
-            # if line in meta_data:
-            #     # if the values are different then replace the old value with the new one??? 
-            #     if line.split(':')[1].strip() != meta_data.split(':')[1].strip():
-            #         # meta_data = meta_data.replace(line, '')
-            #         # meta_data+=str(line)
-            #         debug.log_warning(f'Metadata for line: {line} has changed. Keeping both values...')
-            if line != craft_data.splitlines()[-1]:
-                meta_data+=str(line)+'\n'
-            else:
-                meta_data+=str(line)
-                
-    return meta_data
+    # Update prev_metadata with craft_data, overwriting values in prev_metadata with values from craft_data
+    for key, value in craft_data.items():
+        
+        if key in prev_metadata:
+            # If there is a conflict in values, you could choose to resolve it:
+            # perhaps by appending or choosing one value over the other
+            prev_metadata[key] = f"{prev_metadata[key]}, {value}" if prev_metadata[key] != value else value
+        else:
+            prev_metadata[key] = value
+
+    return prev_metadata
+
 
 def _join_metadata(meta_list):
     meta_data = ''
