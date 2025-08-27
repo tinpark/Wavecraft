@@ -155,3 +155,198 @@ numpy>=1.24.4
 ## License
 
 `Wavecraft` is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for more details.
+
+## Help Dump
+
+
+Required arguments:
+    operation
+        Operation to perform. See below for details on each operation.
+    input
+        Path to the audio, metadata or dataset file. It can be a directory for
+        batch processing. It is valid for all operations
+
+Help:
+    -h, --help
+        show this help message and exit
+
+I/O:
+    -it, --input-text 
+        The text file containing the segmentation data. Defaults to the
+        nameofaudio.txt
+    -o, --output-directory 
+        Path to the output directory. Optional.
+    -st, --save-txt
+        Save segment times to a text file.
+
+Audio Settings (low-level) - these apply to all operations where relevant:
+
+    -sr, --sample-rate 
+        Sample rate that the files will be loaded in for processing. Default is
+        22050. Note that the default for exported sounds is the sound files'
+        native sample rate
+    --fmin 
+        Minimum analysis frequency. Default is 30.
+    --fmax 
+        Maximum analysis frequency. Default is 11000
+    --n-fft 
+        FFT size. Default is 2048.
+    --hop-size 
+        Hop size. Default is 512.
+    -spc, --spectogram 
+        Spectogram to use when doing processes like decomposition among others.
+        Default is None, in which case the appropiate spectogram will be used.
+        Change this option only if you know what you are doing or if you want to
+        experiment.
+    -nra, --no-resolution-adjustment
+        Disables the automatic adjusment of the analysis resolution and audio
+        settings based on file duration. It is enabled by default.
+
+Segmentation : splits the audio file into segments:
+    operation -> segment
+
+    -m, --segmentation-method 
+        Segmentation method to use.
+    -ml, --min-length 
+        Minimum length of a segment in seconds. Default is 0.1s. anything
+        shorter won't be used
+    -t, --onset-threshold 
+        Onset detection threshold. Default is 0.08.
+    -oe, --onset-envelope 
+        Onset envelope to use for onset detection. Default is mel (mel
+        spectrogram). Choices are: mel (mel spectrogram), mfcc (Mel-frequency
+        cepstral coefficients), cqt_chr (chroma constant-Q transform), rms
+        (root-mean-square energy), zcr (zero-crossing rate), cens (chroma energy
+        normalized statistics), tmpg (tempogram), ftmpg (fourier tempogram),
+        tonnetz (tonal centroid features)
+    -bl, --backtrack-length 
+        Backtrack length in miliseconds. Backtracks the segments from the
+        detected onsets. Default is 20ms.
+    -a, --action {1,2,3}
+        Action to perform: 1 for Render, 2 for Export, 3 for Exit. This is
+        useful if you want just to automatically batch a large folder of files
+        with the same outcome.
+
+   generics:
+    [-fi, --fade-in 2] [-fo, --fade-out 12] [-ct, --curve-type exp] [-ts,
+    --trim-silence -65] [-ff, --filter-frequency 40] [-ft, --filter-type
+    high] [-nl, --normalisation-level -3] [-nm, --normalisation-mode peak]
+
+Feature extraction:
+    operation -> extract
+
+    -fex, --feature-extractor 
+        Feature extractor to use. Default is all. Choices are: mel (mel
+        spectrogram), cqt (constant-Q transform), stft (short-time Fourier
+        transform), cqt_chr (chroma constant-Q transform), mfcc (Mel-frequency
+        cepstral coefficients), rms (root-mean-square energy), zcr (zero-
+        crossing rate), cens (chroma energy normalized statistics), tmpg
+        (tempogram), ftmpg (fourier tempogram), tonnetz (tonal centroid
+        features), pf (poly features).
+    -fdic, --flatten-dictionary
+        Flatten the dictionary of features. Default is False.
+
+Distance metric learning - finds the most similar sounds based on a features dataset:
+    operation -> proxim
+
+    -ns, --n-similar 
+        Number of similar sounds to retrieve
+    -id, --identifier 
+        Identifier to test, i.e., the name of sound file. If not provided, all
+        sounds in the dataset will be tested against each other
+    -cls, --class_to_analyse 
+        Class to analyse. Default: stats. If not provided, all classes will be
+        analysed. Note that this option can produce unexpected results if the
+        dataset contains multiple classes with different dimensions
+    -mt, --metric-to-analyze 
+        Metric to analyze
+    -tc, --test-condition 
+        Test condition for the specified metric. A condition is a string
+        enclosed in '', that can be used to filter the dataset. For example, -mt
+        duration -tc '0.5-1.5' or -mt duration -tc '<0.5'. Default: None
+    -ops
+        Use opetions file to fine tune the metric learning
+    -mn, --n-max 
+        Max number of similar files to retrieve, Default: -1 (all)
+    -mtr, --metric-range  [ ...]
+        Range of values to test for a specific metric. Default: None
+
+Decomposition - decomposes the audio file into harmonic, percussive or n components:
+    operation -> decomp
+
+    -nc, --n-components 
+        Number of components to use for decomposition.
+    -hpss, --source-separation 
+        Decompose the signal into harmonic and percussive components, If used
+        for segmentation, the choice of both is invalid.
+    -sk, --sklearn
+        Use sklearn for decomposition. Default is False.
+    -nnf, --nn-filter
+        Use nearest neighbor filtering for decomposition. Default is False.
+        Produces a single stream, n_components and hpss are not valid
+
+Beat detection - detects beats in the audio file:
+    operation -> beat
+
+    -k 
+        Number of beat clusters to detect. Default is 5.
+
+Filter - applies a high / low pass filter to the audio file:
+    operation -> filter
+
+    -ff, --filter-frequency 
+        Frequency to use for the high-pass filter. Default is 40 Hz. Set to 0 to
+        disable
+    -ft, --filter-type 
+        Type of filter to use. Default is high-pass.
+
+Normalization - normalizes the audio file:
+    operation -> norm
+
+    -nl, --normalisation-level 
+        Normalisation level, default is -3.
+    -nm, --normalisation-mode 
+        Normalisation mode; default is 'peak'.
+
+Metadata - writes or reads metadata to/from the audio file:
+    operations -> wmeta, rmeta
+
+    --meta  [ ...]
+        List of metadata or comments to write to the file. Default is None.
+    -mf, --meta-file 
+        Path to a JSON metadata file. Default is None.
+
+Trim - trims the audio file. Either range or silence can be used. Defining -tr will disable silence trimming:
+    operation -> trim
+
+    -tr, --trim-range 
+        Trim position range in seconds. It can be a single value or a range
+        (e.g. 0.5-1.5) or condition (e.g. -0.5).
+    -ts, --trim-silence 
+        Trim silence from the beginning and end of the audio file. Default is
+        -70 db.
+
+Split - splits the audio file into multiple files:
+    operation -> split
+
+    -sp, --split-points  [ ...]
+        Split points in seconds. It can be a single value or a list of split
+        points (e.g. 0.5 0.2 3).
+
+Fade - applies a fade in and/or fade out to the audio file. See audio settings for options:
+    operation -> fade
+
+    -fi, --fade-in 
+        Duration in ms for fade in. Default is 12ms.
+    -fo, --fade-out 
+        Duration in ms for fade in. Default is 2ms.
+    -ct, --curve-type 
+        Type of curve to use for fades. Default is exponential.
+
+Pan - pans the audio file:
+    operation -> pan
+
+    -pa, --pan-amount 
+        Pan amount. Default is 0.
+    -mo, --mono
+        Converts the audio file to mono.
